@@ -19,7 +19,10 @@ const style = {
 };
 
 const STYLE_DEFS = [
-  { id: 'grid', kind: 2, opts: 'hex|square', min: 0, max: 1, step: 1, key: 'hex',
+  // The options are in this order, and not the other way round, because the value
+  // *is* the flag: index 1 means hex, and the shader reads it as a boolean. Listing
+  // hex first would have made the menu say "square" while the screen printed hex.
+  { id: 'grid', kind: 2, opts: 'square|hex', min: 0, max: 1, step: 1, key: 'hex',
     help: 'the halftone lattice. a hex screen is what a press would use; a square one lines the dots up with the cells.' },
   { id: 'dots', kind: 2, opts: 'classic|gooey', min: 0, max: 1, step: 1, key: 'gooey',
     help: 'classic keeps every cell legible. gooey lets neighbouring dots merge like wet ink, at the cost of being able to read individual cells.' },
@@ -35,7 +38,38 @@ const STYLE_DEFS = [
     help: 'noise over the whole sheet: the grain of the film you photographed it with.' },
 ];
 
-// How fast each model should run out of the box, in generations per frame.
+// The speed control, in generations per frame.
+//
+// The scale is geometric and it goes *below one*, which is the important part. A
+// frame is 16 ms, so even the slowest whole-number setting is sixty generations a
+// second — far too fast to watch a glider actually glide, or to see the moment
+// Langton's ant stops thrashing and starts building its highway. At 1/16 the
+// simulation advances about four generations a second, which is roughly the rate
+// at which a person can follow what is happening to an individual cell.
+//
+// A geometric scale rather than a linear one because the useful range spans three
+// orders of magnitude, and a linear slider would spend most of its travel in a
+// region nobody wants.
+const SPEEDS = [
+  1 / 16, 1 / 8, 1 / 4, 1 / 2, 1, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64, 96, 128,
+];
+
+function speedLabel(v) {
+  if (v >= 1) return String(v);
+  return `1/${Math.round(1 / v)}`;
+}
+
+function nearestSpeedIndex(v) {
+  let best = 0;
+  let d = Infinity;
+  SPEEDS.forEach((s, i) => {
+    const k = Math.abs(Math.log(s) - Math.log(v));
+    if (k < d) { d = k; best = i; }
+  });
+  return best;
+}
+
+// How fast each model should run out of the box.
 //
 // This is not a preference, it is a property of the model. Gray-Scott's patterns
 // take several thousand solver steps to develop and Langton's ant does not build
@@ -57,6 +91,7 @@ const SPEED = {
 };
 
 const app = {
+  acc: 0,
   M: null,
   models: [],       // the catalogue, as declared by the C
   mi: 0,
@@ -114,9 +149,7 @@ function selectModel(i, { keepParams = false, params = null, speed = null } = {}
   const m = model();
   const [lo, hi] = seedParts();
 
-  app.speed = speed ?? SPEED[m.id] ?? 1;
-  $speed.value = String(app.speed);
-  $speedV.textContent = String(app.speed);
+  setSpeed(speed ?? SPEED[m.id] ?? 1);
 
   call.select(i, m.w, m.h, lo, hi);
   app.grid = { w: call.width(), h: call.height() };
@@ -181,15 +214,23 @@ function frame(now) {
   }
 
   if (app.running) {
-    // A wall-clock budget, not a step count. If somebody sets the speed to sixty
-    // generations a frame on a model that cannot manage it, the simulation slows
-    // down — it does not lock up the browser and take the interface with it.
+    // The accumulator is what lets the speed go below one generation per frame:
+    // fractional speeds simply take several frames to earn a step. It also means
+    // the rendering keeps running at 60 Hz while the simulation crawls, so
+    // panning, painting and the plots all stay live at 1/16 speed.
+    app.acc += app.speed;
+
+    // A wall-clock budget, not a step count. If somebody asks for 128 generations
+    // a frame on a model that cannot manage it, the simulation slows down; it
+    // does not lock up the browser and take the interface down with it.
     const deadline = performance.now() + 10;
-    let done = 0;
-    while (done < app.speed) {
+    while (app.acc >= 1) {
       call.step(1);
-      done++;
-      if (performance.now() > deadline) break;
+      app.acc -= 1;
+      if (performance.now() > deadline) {
+        app.acc = 0; // do not build up a debt we will never repay
+        break;
+      }
     }
     readObservables();
   }
@@ -498,10 +539,31 @@ $seed.addEventListener('change', () => {
 
 const $speed = document.getElementById('speed');
 const $speedV = document.getElementById('speed-v');
+$speed.min = '0';
+$speed.max = String(SPEEDS.length - 1);
+$speed.step = '1';
+
+function setSpeed(v) {
+  const i = nearestSpeedIndex(v);
+  app.speed = SPEEDS[i];
+  app.acc = 0;
+  $speed.value = String(i);
+  $speedV.textContent = speedLabel(app.speed);
+}
+
 $speed.addEventListener('input', () => {
-  app.speed = parseInt($speed.value, 10);
-  $speedV.textContent = String(app.speed);
+  app.speed = SPEEDS[parseInt($speed.value, 10)];
+  app.acc = 0;
+  $speedV.textContent = speedLabel(app.speed);
+  writeHash();
 });
+
+function nudgeSpeed(d) {
+  const i = Math.max(0, Math.min(SPEEDS.length - 1, nearestSpeedIndex(app.speed) + d));
+  setSpeed(SPEEDS[i]);
+  toast(`speed ${speedLabel(app.speed)} gen/frame`);
+  writeHash();
+}
 
 const $readout = document.getElementById('readout');
 const togglePlots = () => { $readout.hidden = !$readout.hidden; };
@@ -564,6 +626,8 @@ window.addEventListener('keydown', (e) => {
     case 's': savePng(); break;
     case '[': app.brush = Math.max(0, app.brush - 1); toast(`brush ${app.brush}`); break;
     case ']': app.brush = Math.min(40, app.brush + 1); toast(`brush ${app.brush}`); break;
+    case '-': nudgeSpeed(-1); break;
+    case '=': case '+': nudgeSpeed(1); break;
     default: break;
   }
 });
@@ -583,7 +647,8 @@ function writeHash() {
   hashTimer = setTimeout(() => {
     const m = model();
     const p = params();
-    const parts = [`m=${m.id}`, `seed=${app.seed.toString(16)}`, `speed=${app.speed}`];
+    const parts = [`m=${m.id}`, `seed=${app.seed.toString(16)}`,
+                   `speed=${Math.round(app.speed * 10000) / 10000}`];
     m.params.forEach((d, i) => {
       const v = p[i];
       if (Math.abs(v - d.def) > 1e-9) parts.push(`${d.id}=${trim(v)}`);
@@ -628,8 +693,8 @@ function boot() {
       try { app.seed = BigInt(`0x${kv.seed}`); } catch (_) { /* keep the default */ }
     }
     if (kv.speed) {
-      const s = parseInt(kv.speed, 10);
-      if (Number.isFinite(s) && s >= 1) hashSpeed = Math.min(60, s);
+      const sp = parseFloat(kv.speed);
+      if (Number.isFinite(sp) && sp > 0) hashSpeed = sp;
     }
     for (const d of STYLE_DEFS) {
       if (kv[d.id] !== undefined) {

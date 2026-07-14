@@ -272,6 +272,31 @@ html, body {
   color: var(--ink-55);
 }
 
+/* Same anatomy as a recipe button: this rail has one kind of thing you press. */
+.paperlink {
+  display: block;
+  margin-bottom: 4px;
+  padding: 7px 9px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--ink);
+  text-decoration: none;
+  background: var(--fill);
+  border-radius: 5px;
+  transition: background .15s;
+}
+.paperlink:hover { background: var(--fill-hover); }
+.paperlink:focus-visible { outline: 1.5px solid var(--accent); outline-offset: 1px; }
+.paperlink .rn {
+  display: block;
+  margin-top: 3px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--ink-55);
+}
+
 .show-rail[hidden] { display: none; }
 .show-rail {
   position: fixed;

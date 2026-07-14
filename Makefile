@@ -54,9 +54,15 @@ dist/morphogen.js: $(CORE) src/wasm/api.c Makefile
 
 # The site is static files; there is no bundler and there never will be. Copying
 # is the build step.
+#
+# The paper is served from the site as well as living in the repository. GitHub's
+# own PDF viewer gives up on it often enough to be a nuisance ("unable to render"),
+# whereas a PDF served over plain HTTP is handled by the browser's built-in viewer,
+# which never fails. So the canonical link people click is the hosted one.
 web: $(WEB)
 	@mkdir -p dist
 	@cp -r src/web/. dist/
+	@cp -f paper/morphogen.pdf dist/morphogen.pdf 2>/dev/null || true
 	@touch dist/.nojekyll
 
 test: tests/run
