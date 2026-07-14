@@ -1,3 +1,7 @@
 tests/run
 *.o
 .DS_Store
+tools/figures
+paper/*.aux
+paper/*.log
+paper/*.out

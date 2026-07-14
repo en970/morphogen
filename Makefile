@@ -71,3 +71,24 @@ serve: all
 
 clean:
 	rm -rf dist tests/run
+
+# ── the paper ─────────────────────────────────────────────────────────────
+#
+# Every number and every figure in it is produced by tools/figures.c, which
+# links against the same src/core the browser runs. There is no separate figure
+# code that could drift away from the thing being described: if a plot in the
+# paper is wrong, the simulation is wrong.
+
+.PHONY: paper figures
+
+tools/figures: $(CORE) tools/figures.c
+	$(CC) $(WARN) -O2 -std=c99 -Isrc/core $(CORE) tools/figures.c -lm -o $@
+
+figures: tools/figures
+	@mkdir -p paper/data paper/fig
+	./tools/figures
+	@python3 tools/pgm2png.py paper/fig
+
+paper: figures
+	cd paper && tectonic -X compile morphogen.tex --outdir .
+	@ls -l paper/morphogen.pdf | awk '{printf "  paper: %.0f KB\n", $$5/1024}'
