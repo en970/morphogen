@@ -144,17 +144,17 @@ export const FIGURES = {
       id: 'F-k',
       label: "Pearson's (F, k) map",
       note: `The whole of Gray-Scott lives in two numbers. Each square is a separate
-        run of the reaction, coloured by how much of the autocatalyst V survived.
-        The dark band is where patterns exist at all; on either side of it the dish
-        goes uniformly empty or uniformly full. Pearson mapped this plane in 1993
-        and gave the regions Greek letters. Pick a dark square, read off its F and
-        k, and go and set them.`,
+        run of the reaction, coloured by how much the field varies from place to
+        place — which is what a pattern is. Both uniform states, the empty dish and
+        the full one, are white. Only the band between them has structure in it, and
+        that band is what Pearson mapped in 1993 and lettered with Greek. Pick a dark
+        square, read off its F and k, and go and set them.`,
       grid: 96,
       gens: 900,
       reps: 1,
       x: { param: 'F', from: 0.005, to: 0.08, steps: 14 },
       y: { param: 'k', from: 0.04, to: 0.07, steps: 12 },
-      metric: { name: 'V', obs: 0 },
+      metric: { name: 'structure', obs: 3 },
     },
   ],
 

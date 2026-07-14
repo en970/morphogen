@@ -151,16 +151,32 @@ static void gs_step(World *wo) {
         }
     }
 
-    double sv = 0.0, su = 0.0;
+    double sv = 0.0, su = 0.0, svv = 0.0;
     int active = 0;
     for (int i = 0; i < n; ++i) {
         sv += s->v[i];
+        svv += (double)s->v[i] * s->v[i];
         su += s->u[i];
         if (s->v[i] > 0.15f) active++;
     }
-    wo->obs[0] = (float)(sv / n);
+    const double mean = sv / n;
+    double var = svv / n - mean * mean;
+    if (var < 0.0) var = 0.0;
+
+    wo->obs[0] = (float)mean;
     wo->obs[1] = (float)(su / n);
     wo->obs[2] = (float)active / (float)n;
+
+    /* The spatial standard deviation of V, and it is the observable that actually
+     * answers "is there a pattern here?".
+     *
+     * The mean of V does not. It is high when the dish is full of structure and it
+     * is equally high when the dish is uniformly full of V and there is no
+     * structure at all — so a phase map coloured by the mean shows a smooth
+     * gradient where the truth is a sharp band. The standard deviation is zero in
+     * *both* uniform states, empty and full, and large only where the field varies
+     * from place to place, which is what a pattern is. */
+    wo->obs[3] = (float)sqrt(var);
 }
 
 static void gs_ink(World *wo, uint8_t *out) {
@@ -209,8 +225,8 @@ const Model MODEL_GRAYSCOTT = {
     .ink_colors = {0x2b2b2b, 0x81acec, 0x000000, 0x000000},
     .params = PARAMS,
     .n_params = P_NPARAM,
-    .obs_names = {"V", "U", "active", 0, 0, 0},
-    .n_obs = 3,
+    .obs_names = {"V", "U", "active", "structure", 0, 0},
+    .n_obs = 4,
     .mem = gs_mem,
     .init = gs_init,
     .step = gs_step,
