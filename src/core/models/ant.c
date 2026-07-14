@@ -42,7 +42,7 @@
 
 #include <string.h>
 
-enum { P_RULE = 0, P_ANTS, P_SPEED, P_NPARAM };
+enum { P_RULE = 0, P_ANTS, P_STRIDE, P_NPARAM };
 
 /* The turmite rule, as an index into a table of strings. Exposing it as free
  * text would be nicer and is a job for the panel, not the kernel. */
@@ -61,7 +61,11 @@ static const ParamDef PARAMS[] = {
      "RL|RLR|LLRR|LRRRRRLLR|RRLLLRLLLRRR|LLRRRLRLRLLR",
      "the turmite rule. one symbol per colour: R turn right, L turn left. RL is Langton's ant."},
     {"ants",  P_INT,   1.0f, 8.0f, 1.0f, 1.0f, 0, "how many ants. two ants will eventually erase each other's highways."},
-    {"speed", P_INT,   1.0f, 400.0f, 1.0f, 60.0f, 0, "ant steps per generation. the highway needs about 10,000 steps; be patient or turn this up."},
+    /* Named `stride` and not `speed`, because the shell already has a control
+     * called speed — how many generations it runs per frame — and both of them
+     * end up in the URL fragment. Two different numbers under one key in a
+     * permalink is a silent corruption of exactly the thing the permalink is for. */
+    {"stride", P_INT,  1.0f, 400.0f, 1.0f, 60.0f, 0, "ant steps per generation. the highway needs about 10,000 steps; be patient, or turn this up."},
 };
 
 #define MAX_ANTS 8
@@ -104,13 +108,13 @@ static void ant_step(World *wo) {
     St *s = (St *)wo->st;
     const int w = wo->w, h = wo->h;
     const int na = (int)wo->p[P_ANTS];
-    const int speed = (int)wo->p[P_SPEED];
+    const int stride = (int)wo->p[P_STRIDE];
     const int nc = s->n_colors;
 
     static const int DX[4] = {0, 1, 0, -1};
     static const int DY[4] = {-1, 0, 1, 0};
 
-    for (int k = 0; k < speed; ++k) {
+    for (int k = 0; k < stride; ++k) {
         for (int a = 0; a < na; ++a) {
             const int i = s->ay[a] * w + s->ax[a];
             const int col = s->c[i];

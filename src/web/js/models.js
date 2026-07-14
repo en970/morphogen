@@ -446,18 +446,18 @@ export const INFO = {
         note: `Turn speed up to 200 and watch the generation counter. Somewhere around
           step 10,000 the chaos will stop and the ant will start building. It is worth
           seeing once.`,
-        params: { rule: 0, ants: 1, speed: 200 },
+        params: { rule: 0, ants: 1, stride: 200 },
       },
       {
         label: 'two ants',
         note: `Two ants each build their own highway — until one drives across the
           other's road, and both of them fall back into chaos.`,
-        params: { rule: 0, ants: 2, speed: 120 },
+        params: { rule: 0, ants: 2, stride: 120 },
       },
       {
         label: 'a turmite',
         note: 'LLRR: more colours, more turns. It grows a symmetric, almost decorative form instead.',
-        params: { rule: 2, ants: 1, speed: 120 },
+        params: { rule: 2, ants: 1, stride: 120 },
       },
     ],
     refs: [

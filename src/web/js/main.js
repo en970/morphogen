@@ -35,6 +35,27 @@ const STYLE_DEFS = [
     help: 'noise over the whole sheet: the grain of the film you photographed it with.' },
 ];
 
+// How fast each model should run out of the box, in generations per frame.
+//
+// This is not a preference, it is a property of the model. Gray-Scott's patterns
+// take several thousand solver steps to develop and Langton's ant does not build
+// its highway until step ten thousand, so at one generation a frame a visitor
+// would sit and watch nothing happen and conclude, reasonably, that it was
+// broken. Schelling, on the other hand, is finished in a couple of hundred
+// rounds and wants to be watched at walking pace.
+const SPEED = {
+  colony: 8,
+  grayscott: 10,
+  lenia: 4,
+  rps: 3,
+  sugarscape: 2,
+  schelling: 2,
+  life: 4,
+  eca: 2,
+  ant: 4,
+  forestfire: 6,
+};
+
 const app = {
   M: null,
   models: [],       // the catalogue, as declared by the C
@@ -88,10 +109,14 @@ function seedParts() {
   return [Number(app.seed & 0xffffffffn), Number((app.seed >> 32n) & 0xffffffffn)];
 }
 
-function selectModel(i, { keepParams = false, params = null } = {}) {
+function selectModel(i, { keepParams = false, params = null, speed = null } = {}) {
   app.mi = i;
   const m = model();
   const [lo, hi] = seedParts();
+
+  app.speed = speed ?? SPEED[m.id] ?? 1;
+  $speed.value = String(app.speed);
+  $speedV.textContent = String(app.speed);
 
   call.select(i, m.w, m.h, lo, hi);
   app.grid = { w: call.width(), h: call.height() };
@@ -592,6 +617,7 @@ function boot() {
   const kv = readHash();
   let mi = 0;
   let ps = null;
+  let hashSpeed = null;
 
   if (kv) {
     if (kv.m) {
@@ -603,11 +629,7 @@ function boot() {
     }
     if (kv.speed) {
       const s = parseInt(kv.speed, 10);
-      if (Number.isFinite(s) && s >= 1) {
-        app.speed = Math.min(60, s);
-        $speed.value = String(app.speed);
-        $speedV.textContent = String(app.speed);
-      }
+      if (Number.isFinite(s) && s >= 1) hashSpeed = Math.min(60, s);
     }
     for (const d of STYLE_DEFS) {
       if (kv[d.id] !== undefined) {
@@ -626,7 +648,7 @@ function boot() {
   }
 
   $seed.value = app.seed.toString(16);
-  selectModel(mi, { params: ps });
+  selectModel(mi, { params: ps, speed: hashSpeed });
   buildStyleRail();
   updatePlayButton();
   requestAnimationFrame(frame);

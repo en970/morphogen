@@ -61,7 +61,7 @@ static const ParamDef PARAMS[] = {
     {"k",     P_FLOAT, 0.030f, 0.075f, 0.0005f, 0.061f, 0, "kill rate. V is removed at rate F+k."},
     {"Du",    P_FLOAT, 0.05f,  0.40f,  0.005f,  0.16f,  0, "diffusivity of U."},
     {"Dv",    P_FLOAT, 0.02f,  0.20f,  0.005f,  0.08f,  0, "diffusivity of V. must be well below Du or no pattern can form."},
-    {"iters", P_INT,   1.0f,   20.0f,  1.0f,    8.0f,   0, "solver steps per displayed generation."},
+    {"iters", P_INT,   1.0f,   40.0f,  1.0f,   16.0f,   0, "solver steps per displayed generation. the patterns take thousands of steps to develop, so this is how impatient you are."},
 };
 
 typedef struct {
