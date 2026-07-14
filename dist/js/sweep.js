@@ -65,22 +65,37 @@ export const FIGURES = {
 
   rps: [
     {
-      id: 'extinction-vs-mobility',
-      label: 'extinction against mobility',
-      note: `Three species in a cycle where none is strongest, and one number
-        deciding whether all three survive: how far they wander. Below the
-        transition the lattice fills with spiral waves and everybody lives. Above
-        it, the spirals outgrow the world, wash out, and two species die. Kerr and
-        colleagues got the same answer with real E. coli — in a flask one strain
-        took over, on a plate all three persisted.`,
+      id: 'biodiversity-vs-mobility',
+      label: 'biodiversity against mobility',
+      note: `The density of the rarest of the three species, against how far they
+        wander. Below the transition the lattice fills with spiral waves, nobody is
+        rare, and everybody lives. Above it the spirals outgrow the world, wash
+        out, and the curve falls to zero: two species are gone. Kerr and colleagues
+        got the same answer with real E. coli — in a flask one strain took over, on
+        a plate all three persisted.`,
+      // The order parameter is the density of the *rarest* species, not the
+      // probability of extinction, and the difference is worth explaining because
+      // the first version got it wrong.
+      //
+      // Extinction is a bit: the species either died or they did not. Averaging
+      // bits over N seeds gives an estimate whose standard error is
+      // sqrt(p(1-p)/N), which at the transition — the only part of the curve
+      // anybody came to see — is about 0.16 even with ten replicates. The curve
+      // came out visibly non-monotonic. That is not what the model does; it is
+      // what ten coin flips do, and no reasonable number of replicates fixes it.
+      //
+      // The rarest species' density is a real number, and every run reports one.
+      // It sits near 0.25 while all three coexist and falls to zero when the
+      // spirals wash out, so it carries the same information with a fraction of
+      // the variance — and it says something the bit could not, which is *how
+      // close* to collapse the ecosystem is before it collapses.
       grid: 96,
-      gens: 700,
+      gens: 1200,
       reps: 4,
       x: { param: 'eps', from: 0.5, to: 55, steps: 11, log: true },
-      // The observables are the three densities; extinction is a fact about them.
       metric: {
-        name: 'P(extinction)',
-        fn: (o) => ((o[0] > 0.005) + (o[1] > 0.005) + (o[2] > 0.005) < 3 ? 1 : 0),
+        name: 'rarest species',
+        fn: (o) => Math.min(o[0], o[1], o[2]),
       },
     },
   ],
