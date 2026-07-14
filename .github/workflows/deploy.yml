@@ -1,0 +1,52 @@
+name: build and deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The core is portable C99, so it can be checked without a browser or an
+      # Emscripten install anywhere in the loop. This is the test that matters:
+      # it asserts that the models still reproduce the numbers in the papers.
+      - name: Check the models against the literature
+        run: make test
+
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 3.1.61          # pinned: 'latest' will break the build silently
+          actions-cache-folder: emsdk-cache
+
+      - name: Build
+        run: make
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

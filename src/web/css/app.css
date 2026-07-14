@@ -1,0 +1,444 @@
+/* Paper, ink, and hairlines.
+ *
+ * There are no shadows anywhere in this stylesheet, and that is deliberate.
+ * Separation is done with one-pixel rules and with fills, never with elevation,
+ * because a printed page has no elevation. There is also no pure white and no
+ * pure black: the paper is #f2f1e8 and the ink is #2b2b2b, and the small
+ * distance each of them keeps from the extremes is most of the reason the thing
+ * looks printed rather than rendered.
+ *
+ * Parameters are labelled with the identifiers they have in the source and in
+ * the papers — `mu`, `sigma`, `F`, `k`, `tau`, `chiR` — in lowercase monospace.
+ * Sentence-casing them into "Growth Centre" would be friendlier and would
+ * quietly cut the control off from the literature it came from.
+ *
+ * Every number is set in tabular figures. A generation counter in proportional
+ * figures visibly wobbles as it ticks, and once you have noticed it you cannot
+ * stop noticing it.
+ */
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal; font-weight: 400; font-display: swap;
+  src: local('IBM Plex Mono'), local('IBMPlexMono');
+}
+
+:root {
+  --paper:      #f2f1e8;
+  --ink:        #2b2b2b;
+  --ink-70:     #2b2b2bb3;
+  --ink-55:     #2b2b2b8c;
+  --ink-35:     #2b2b2b59;
+  --ink-18:     #2b2b2b2e;
+  --hairline:   #dedcd0;
+  --fill:       #e7e5d9;
+  --fill-hover: #dfddd0;
+  --fill-press: #d4d2c4;
+  --accent:     #81acec;
+
+  --font-ui: 'Inter Tight', Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', 'Menlo', 'Consolas', monospace;
+
+  --rail-w: 302px;
+  --status-h: 34px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* the canvas is the page */
+#sim {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: var(--paper);
+  touch-action: none;
+  cursor: crosshair;
+}
+
+/* Film grain over the whole sheet. Static: a live simulation is already moving,
+ * and animating this would cost a full-screen composite every frame for nothing. */
+.grain {
+  position: fixed; inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  opacity: 0.10;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  background-size: 220px 220px;
+  transform: translateZ(0);
+}
+
+/* ── the rail ─────────────────────────────────────────────────────────── */
+
+.rail {
+  position: fixed;
+  top: 16px; right: 16px;
+  bottom: calc(var(--status-h) + 16px);
+  width: var(--rail-w);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  background: color-mix(in srgb, var(--paper) 90%, transparent);
+  backdrop-filter: blur(14px) saturate(1.05);
+  -webkit-backdrop-filter: blur(14px) saturate(1.05);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  box-shadow: none;
+  overflow: hidden;
+  transition: opacity .15s, transform .15s;
+}
+.rail[hidden] { display: none; }
+.rail.gone { opacity: 0; transform: translateX(8px); pointer-events: none; }
+
+.rail-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 9px 10px 9px 12px;
+  border-bottom: 1px solid var(--hairline);
+  flex: none;
+}
+.wordmark {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: .02em;
+  color: var(--ink);
+}
+.rail-btns { display: flex; gap: 4px; }
+
+.rail-body {
+  padding: 4px 12px 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  flex: 1;
+}
+.rail-body::-webkit-scrollbar { width: 5px; }
+.rail-body::-webkit-scrollbar-thumb { background: var(--ink-18); border-radius: 3px; }
+
+.section {
+  margin: 16px 0 8px;
+  font-size: 9.5px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: .13em;
+  color: var(--ink-35);
+}
+
+.tagline {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ink-70);
+}
+.fine {
+  margin: 10px 0 0;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--ink-55);
+}
+
+/* ── a parameter row ──────────────────────────────────────────────────── */
+/* label | track | value. Drag anywhere on the track to scrub; the number on the
+ * right is editable, because sometimes you know exactly what you want. */
+
+.param {
+  display: grid;
+  grid-template-columns: 84px 1fr 54px;
+  align-items: center;
+  gap: 7px;
+  height: 22px;
+  margin-bottom: 5px;
+}
+.param > label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-70);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: help;
+}
+.track {
+  position: relative;
+  height: 20px;
+  border-radius: 4px;
+  background: var(--fill);
+  cursor: ew-resize;
+  overflow: hidden;
+}
+.track .fill {
+  position: absolute; inset: 0;
+  width: 0%;
+  background: var(--ink);
+  opacity: .16;
+}
+.track .tick {
+  position: absolute; top: 3px; bottom: 3px;
+  width: 1px;
+  background: var(--ink);
+  opacity: .5;
+}
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1, 'zero' 1;
+  font-size: 11px;
+  text-align: right;
+  height: 20px;
+  padding: 0 5px;
+  color: var(--ink);
+  background: var(--fill);
+  border: 0;
+  border-radius: 4px;
+  outline: 0;
+  width: 100%;
+}
+.num:focus-visible { background: #f8f8f4; outline: 1.5px solid var(--accent); outline-offset: -1px; }
+
+.select, .mono-input {
+  width: 100%;
+  height: 24px;
+  padding: 0 7px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink);
+  background: var(--fill);
+  border: 0;
+  border-radius: 4px;
+  outline: 0;
+  appearance: none;
+  cursor: pointer;
+}
+.select:focus-visible, .mono-input:focus-visible { outline: 1.5px solid var(--accent); }
+.mono-input { font-variant-numeric: tabular-nums; cursor: text; }
+
+.param select.select { height: 20px; cursor: pointer; }
+
+.seedrow { display: grid; grid-template-columns: 1fr auto; gap: 6px; }
+
+/* ── buttons ──────────────────────────────────────────────────────────── */
+
+.btn, .icon {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink);
+  background: var(--fill);
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow: none;
+  transition: background .15s cubic-bezier(.4,0,.2,1);
+}
+.btn { height: 24px; padding: 0 9px; }
+.icon { width: 22px; height: 22px; line-height: 1; display: inline-grid; place-items: center; }
+.icon.wide { width: 28px; }
+.btn:hover, .icon:hover { background: var(--fill-hover); }
+.btn:active, .icon:active { background: var(--fill-press); }
+.btn:focus-visible, .icon:focus-visible { outline: 1.5px solid var(--accent); outline-offset: 1px; }
+
+/* the "try this" recipes: the most valuable thing on the panel, so they are
+ * buttons rather than a paragraph telling you what to type */
+.recipes { display: flex; flex-direction: column; gap: 4px; }
+.recipe {
+  text-align: left;
+  padding: 7px 9px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--ink);
+  background: var(--fill);
+  border: 0; border-radius: 5px;
+  cursor: pointer;
+  transition: background .15s;
+}
+.recipe:hover { background: var(--fill-hover); }
+.recipe .rn {
+  display: block;
+  margin-top: 3px;
+  font-family: var(--font-ui);
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--ink-55);
+}
+
+.show-rail[hidden] { display: none; }
+.show-rail {
+  position: fixed;
+  top: 16px; right: 16px;
+  z-index: 21;
+  width: 30px; height: 30px;
+  display: grid; place-items: center;
+  background: color-mix(in srgb, var(--paper) 90%, transparent);
+  backdrop-filter: blur(14px);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+/* ── the info drawer ──────────────────────────────────────────────────── */
+/* It replaces the rail's contents rather than covering the canvas. The
+ * simulation must stay visible while you read about it; that is the whole
+ * point of reading about it. */
+
+.info h1 { margin: 10px 0 0; font-size: 17px; font-weight: 500; letter-spacing: -.01em; }
+.back {
+  margin-top: 4px;
+  padding: 0; border: 0; background: none;
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--ink-55); cursor: pointer;
+}
+.back:hover { color: var(--ink); }
+.prose { font-size: 12.5px; line-height: 1.58; color: var(--ink-70); }
+.prose p { margin: 0 0 9px; }
+.prose code, .eq {
+  display: block;
+  margin: 8px 0;
+  padding: 7px 9px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--ink);
+  background: var(--fill);
+  border-radius: 4px;
+  overflow-x: auto;
+}
+.refs {
+  margin: 0; padding-left: 16px;
+  font-size: 11px; line-height: 1.5;
+  color: var(--ink-55);
+}
+.refs li { margin-bottom: 7px; }
+
+/* ── the status strip ─────────────────────────────────────────────────── */
+
+.status {
+  position: fixed;
+  inset: auto 0 0 0;
+  height: var(--status-h);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 12px;
+  background: color-mix(in srgb, var(--paper) 90%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-top: 1px solid var(--hairline);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1, 'zero' 1;
+  font-size: 11px;
+  color: var(--ink-70);
+  white-space: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.status::-webkit-scrollbar { display: none; }
+.transport { display: flex; gap: 3px; }
+.stat { display: inline-flex; gap: 5px; align-items: baseline; }
+.status .k { color: var(--ink-35); }
+.status .v { color: var(--ink); }
+.spacer { margin-left: auto; }
+
+.speedbox { display: inline-flex; align-items: center; gap: 6px; }
+.speedbox input[type=range] {
+  -webkit-appearance: none; appearance: none;
+  width: 62px; height: 3px;
+  background: var(--ink-18);
+  border-radius: 2px;
+  cursor: ew-resize;
+}
+.speedbox input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 9px; height: 13px;
+  background: var(--ink);
+  border-radius: 2px;
+  cursor: ew-resize;
+}
+.speedbox input[type=range]::-moz-range-thumb {
+  width: 9px; height: 13px; border: 0;
+  background: var(--ink); border-radius: 2px;
+}
+
+/* ── the readout ──────────────────────────────────────────────────────── */
+
+.readout {
+  position: fixed;
+  left: 16px;
+  bottom: calc(var(--status-h) + 16px);
+  z-index: 20;
+  width: 320px;
+  background: color-mix(in srgb, var(--paper) 92%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.readout[hidden] { display: none; }
+.readout-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 8px 6px 12px;
+  border-bottom: 1px solid var(--hairline);
+}
+.readout-head .section { margin: 0; }
+.plots { padding: 10px 12px 12px; }
+
+.plot { margin-bottom: 12px; }
+.plot:last-child { margin-bottom: 0; }
+.plot-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  margin-bottom: 3px;
+}
+.plot-head .pk { color: var(--ink-35); }
+.plot-head .pv {
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1, 'zero' 1;
+}
+.plot canvas { display: block; width: 100%; height: 34px; }
+
+.toast {
+  position: fixed;
+  left: 50%; bottom: calc(var(--status-h) + 20px);
+  transform: translateX(-50%);
+  z-index: 40;
+  padding: 7px 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--paper);
+  background: var(--ink);
+  border-radius: 5px;
+}
+.toast[hidden] { display: none; }
+
+/* ── small screens ────────────────────────────────────────────────────── */
+/* The reference simply deletes its control panel below a breakpoint. We do not:
+ * a laboratory you cannot operate is not a laboratory. The rail becomes a sheet. */
+
+@media (max-width: 760px) {
+  .rail {
+    top: auto;
+    left: 8px; right: 8px;
+    bottom: calc(var(--status-h) + 8px);
+    width: auto;
+    max-height: 52vh;
+  }
+  .readout { left: 8px; right: 8px; width: auto; bottom: calc(var(--status-h) + 8px); }
+  .status { gap: 10px; }
+  .speedbox { display: none; }
+}

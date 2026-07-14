@@ -1,0 +1,3 @@
+*.wasm binary
+dist/morphogen.js linguist-generated
+dist/morphogen.wasm linguist-generated

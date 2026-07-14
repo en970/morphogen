@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>morphogen — a laboratory for cellular automata</title>
+<meta name="description" content="An interactive laboratory for cellular automata and agent-based models: nutrient-limited bacterial colonies, Sugarscape, Lenia, Gray-Scott, spatial rock-paper-scissors. C cores compiled to WebAssembly, with live measurement.">
+<meta name="theme-color" content="#f2f1e8">
+<link rel="stylesheet" href="css/app.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23f2f1e8'/><circle cx='10' cy='10' r='2' fill='%232b2b2b'/><circle cx='22' cy='10' r='4' fill='%232b2b2b'/><circle cx='10' cy='22' r='5' fill='%232b2b2b'/><circle cx='22' cy='22' r='2.5' fill='%232b2b2b'/></svg>">
+</head>
+<body>
+
+<canvas id="sim"></canvas>
+<div class="grain" aria-hidden="true"></div>
+
+<!-- the rail -->
+<aside class="rail" id="rail">
+  <header class="rail-head">
+    <span class="wordmark">morphogen</span>
+    <span class="rail-btns">
+      <button id="btn-info" class="icon" title="about this model (i)" aria-label="about this model">i</button>
+      <button id="btn-hide" class="icon" title="hide the panel (f)" aria-label="hide the panel">—</button>
+    </span>
+  </header>
+
+  <div class="rail-body" id="rail-body">
+    <div class="section">model</div>
+    <select id="model-select" class="select"></select>
+    <p class="tagline" id="tagline"></p>
+
+    <div class="section">rule</div>
+    <div id="params"></div>
+
+    <div class="section">try this</div>
+    <div class="recipes" id="recipes"></div>
+
+    <div class="section">print</div>
+    <div id="style-params"></div>
+
+    <div class="section">seed</div>
+    <div class="seedrow">
+      <input id="seed" class="mono-input" spellcheck="false">
+      <button id="btn-reseed" class="btn" title="new seed (shift+R)">new</button>
+    </div>
+    <p class="fine">The seed and every parameter live in the address bar. Copy the
+      link and you are not sharing a picture of a run — you are sharing the run.</p>
+  </div>
+
+  <!-- the info drawer replaces the rail body rather than covering the canvas -->
+  <div class="rail-body info" id="info" hidden>
+    <button class="back" id="btn-back">← back</button>
+    <h1 id="info-title"></h1>
+    <div class="section">what am I looking at</div>
+    <div class="prose" id="info-what"></div>
+    <div class="section">how it works</div>
+    <div class="prose" id="info-how"></div>
+    <div class="section">references</div>
+    <ol class="refs" id="info-refs"></ol>
+  </div>
+</aside>
+
+<button class="show-rail" id="btn-show" hidden aria-label="show the panel">☰</button>
+
+<!-- the readout -->
+<section class="readout" id="readout" hidden>
+  <div class="readout-head">
+    <span class="section">readout</span>
+    <button class="icon" id="btn-plots-close" aria-label="close">×</button>
+  </div>
+  <div class="plots" id="plots"></div>
+</section>
+
+<!-- the status strip -->
+<footer class="status">
+  <span class="transport">
+    <button id="btn-play" class="icon wide" title="run / pause (space)">▶</button>
+    <button id="btn-step" class="icon" title="one generation (.)">›</button>
+    <button id="btn-reset" class="icon" title="reset (r)">↺</button>
+  </span>
+
+  <label class="speedbox" title="generations per frame">
+    <span class="k">speed</span>
+    <input type="range" id="speed" min="1" max="60" step="1" value="1">
+    <span class="v" id="speed-v">1</span>
+  </label>
+
+  <span class="stat"><span class="k">gen</span> <span class="v" id="st-gen">0</span></span>
+  <span class="stat" id="st-obs"></span>
+
+  <span class="spacer"></span>
+
+  <span class="stat"><span class="k">fps</span> <span class="v" id="st-fps">—</span></span>
+  <span class="stat"><span class="k">grid</span> <span class="v" id="st-grid">—</span></span>
+  <button id="btn-plots" class="btn" title="live measurement (p)">readout</button>
+  <button id="btn-link" class="btn" title="copy a link to this exact run">link</button>
+  <button id="btn-png" class="btn" title="save a print (s)">png</button>
+</footer>
+
+<div class="toast" id="toast" hidden></div>
+
+<noscript>
+  <p style="padding:2rem;font-family:monospace">This is a simulation. It needs JavaScript and WebGL2.</p>
+</noscript>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
