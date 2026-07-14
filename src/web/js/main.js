@@ -3,6 +3,7 @@ import { Halftone } from './halftone.js';
 import { makeRow, fmt } from './rail.js';
 import { Plots } from './plots.js';
 import { INFO } from './models.js';
+import { Sweep, FIGURES } from './sweep.js';
 
 // ── state ──────────────────────────────────────────────────────────────────
 
@@ -338,8 +339,84 @@ function buildRail() {
     $recipes.appendChild(b);
   }
 
+  buildFigures();
+
   if (!$styleParams.childElementCount) buildStyleRail();
 }
+
+// ── the sweep panel ────────────────────────────────────────────────────────
+
+const $figures = document.getElementById('figures');
+const $sweep = document.getElementById('sweep');
+const $sweepTitle = document.getElementById('sweep-title');
+const $sweepNote = document.getElementById('sweep-note');
+const $sweepProgress = document.getElementById('sweep-progress');
+const $sweepRun = document.getElementById('sweep-run');
+const $sweepCanvas = document.getElementById('sweep-canvas');
+
+const sweep = new Sweep($sweepCanvas, (f) => {
+  $sweepProgress.style.width = `${(f * 100).toFixed(1)}%`;
+});
+
+let currentFig = null;
+
+function buildFigures() {
+  const figs = FIGURES[model().id] || [];
+  $figures.innerHTML = '';
+  if (!figs.length) {
+    const p = document.createElement('p');
+    p.className = 'fine';
+    p.textContent = 'No swept figure for this model yet.';
+    $figures.appendChild(p);
+    return;
+  }
+  for (const fig of figs) {
+    const b = document.createElement('button');
+    b.className = 'recipe';
+    const cost = fig.x.steps * (fig.y ? fig.y.steps : 1) * (fig.reps || 1);
+    b.innerHTML = `${escapeHtml(fig.label)}<span class="rn">${cost} runs of the model, ` +
+      `${fig.gens.toLocaleString('en-US')} generations each, in parallel.</span>`;
+    b.addEventListener('click', () => openSweep(fig));
+    $figures.appendChild(b);
+  }
+}
+
+function openSweep(fig) {
+  currentFig = fig;
+  $sweep.hidden = false;
+  $sweepTitle.textContent = fig.label;
+  $sweepNote.textContent = squash(fig.note);
+  $sweepProgress.style.width = '0%';
+  sweep.grid = null;
+  sweep.resize();
+  runSweep();
+}
+
+async function runSweep() {
+  if (!currentFig || sweep.running) return;
+  $sweepRun.textContent = 'running';
+  $sweepRun.disabled = true;
+  try {
+    // The sweep starts from whatever is on the sliders right now, so it explores
+    // the neighbourhood of the run you are actually looking at — only the swept
+    // parameters are overridden.
+    await sweep.run(currentFig, model(), app.mi, Array.from(params()));
+  } catch (e) {
+    toast(`sweep failed: ${e.message}`);
+  }
+  $sweepRun.textContent = 'run';
+  $sweepRun.disabled = false;
+}
+
+$sweepRun.addEventListener('click', () => {
+  if (sweep.running) { sweep.cancel(); return; }
+  runSweep();
+});
+document.getElementById('sweep-close').addEventListener('click', () => {
+  sweep.cancel();
+  $sweep.hidden = true;
+});
+window.addEventListener('resize', () => { if (!$sweep.hidden) sweep.resize(); });
 
 // Which parameters only bite at initialisation? Changing the feed rate of a
 // running Gray-Scott is a real experiment; changing the initial soup density is

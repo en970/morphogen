@@ -30,7 +30,7 @@ WARN := -Wall -Wextra -Wno-unused-parameter
 #   Allocating once, up front, removes the failure mode rather than papering
 #   over it.
 EMFLAGS := -O3 -flto -msimd128 \
-	-sINITIAL_MEMORY=134217728 \
+	-sINITIAL_MEMORY=50331648 \
 	-sALLOW_MEMORY_GROWTH=0 \
 	-sMALLOC=emmalloc \
 	-sMODULARIZE=1 -sEXPORT_ES6=1 -sEXPORT_NAME=createMorphogen \

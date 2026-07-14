@@ -33,12 +33,20 @@
 #define API
 #endif
 
-/* Sized for the largest grid any model asks for. Growth is switched off in the
- * build (-sALLOW_MEMORY_GROWTH=0) because a memory.grow silently detaches every
- * typed-array view JavaScript holds — including the one inside the texture
- * upload — and the resulting bug is a blank canvas with no error. Allocating
- * once, up front, deletes the entire failure mode. */
-#define ARENA_BYTES (48u << 20)
+/* Sized for the largest grid any model asks for, with room to spare: the
+ * hungriest is the colony at 512x512, which needs about 7 MB.
+ *
+ * Growth is switched off in the build (-sALLOW_MEMORY_GROWTH=0) because a
+ * memory.grow silently detaches every typed-array view JavaScript holds —
+ * including the one inside the texture upload — and the resulting bug is a blank
+ * canvas with no error anywhere. Allocating once, up front, deletes the failure
+ * mode instead of working around it.
+ *
+ * The number matters more than it looks, because the sweep engine runs several
+ * workers and each one instantiates its own module: the heap is paid for once per
+ * worker. A 48 MB arena behind a 128 MB heap would have cost half a gigabyte to
+ * run five instances of a simulation whose largest grid needs seven. */
+#define ARENA_BYTES (24u << 20)
 
 static World G;
 static uint8_t *g_arena;

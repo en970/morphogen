@@ -437,6 +437,52 @@ html, body {
 }
 .plot canvas { display: block; width: 100%; height: 34px; }
 
+/* ── the sweep ────────────────────────────────────────────────────────── */
+/* Sits opposite the rail, so a phase diagram and the run it came from are on
+ * screen at the same time. That co-visibility is the point: the curve is an
+ * abstraction of the thing moving next to it. */
+
+.sweep {
+  position: fixed;
+  left: 16px; top: 16px;
+  z-index: 20;
+  width: 380px;
+  background: color-mix(in srgb, var(--paper) 93%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.sweep[hidden] { display: none; }
+.sweep .readout-head .btn { margin-right: 4px; }
+#sweep-canvas {
+  display: block;
+  width: 100%;
+  height: 210px;
+}
+.sweep-bar {
+  height: 2px;
+  background: var(--fill);
+}
+.sweep-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--ink);
+  transition: width .12s linear;
+}
+.sweep-note {
+  margin: 0;
+  padding: 10px 12px 12px;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ink-55);
+}
+
+@media (max-width: 760px) {
+  .sweep { left: 8px; right: 8px; width: auto; }
+}
+
 .toast {
   position: fixed;
   left: 50%; bottom: calc(var(--status-h) + 20px);

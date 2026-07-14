@@ -57,6 +57,16 @@ generators are PCG32, seeded per stream; no wall-clock ever enters an update; th
 speed control changes how many generations happen per frame and never what
 happens in one.
 
+**It sweeps.** Each model carries a *reproduce the figure* button. Press it and a
+pool of Web Workers runs the model a hundred-odd times across a parameter range —
+headlessly, in parallel, each worker with its own WebAssembly instance — and draws
+the phase diagram as the points come back. Schelling's segregation curve takes
+about four seconds. Orbium's survival map in the (μ, σ) plane, which is 168
+independent runs of a convolutional field, takes about forty, and what it draws is
+a thin diagonal filament: the region in which the creature is alive rather than
+evaporated or cancerous. You do not have to take anybody's word for the edge of
+chaos. You can watch it get measured.
+
 **It is answerable to the literature.** These are not tolerances invented to make
 the tests pass. They are numbers other people measured, and if the code stops
 reproducing them then the code is wrong:

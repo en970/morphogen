@@ -35,6 +35,9 @@
     <div class="section">try this</div>
     <div class="recipes" id="recipes"></div>
 
+    <div class="section">reproduce the figure</div>
+    <div class="recipes" id="figures"></div>
+
     <div class="section">print</div>
     <div id="style-params"></div>
 
@@ -108,6 +111,20 @@
   <button id="btn-link" class="btn" title="copy a link to this exact run">link</button>
   <button id="btn-png" class="btn" title="save a print (s)">png</button>
 </footer>
+
+<!-- the sweep: a hundred runs of the model, plotted -->
+<section class="sweep" id="sweep" hidden>
+  <div class="readout-head">
+    <span class="section" id="sweep-title">sweep</span>
+    <span>
+      <button class="btn" id="sweep-run">run</button>
+      <button class="icon" id="sweep-close" aria-label="close">×</button>
+    </span>
+  </div>
+  <canvas id="sweep-canvas"></canvas>
+  <div class="sweep-bar"><div class="sweep-fill" id="sweep-progress"></div></div>
+  <p class="sweep-note" id="sweep-note"></p>
+</section>
 
 <div class="toast" id="toast" hidden></div>
 
